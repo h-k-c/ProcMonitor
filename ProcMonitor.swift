@@ -29,14 +29,40 @@ func barColor(_ pct: Double) -> Color {
 
 // MARK: - Liquid Glass Surface
 
+struct VisualEffectBackground: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        view.isEmphasized = true
+        return view
+    }
+
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        view.isEmphasized = true
+    }
+}
+
 struct LiquidGlassPanel: View {
     let radius: CGFloat
     var body: some View {
         RoundedRectangle(cornerRadius:radius,style:.continuous)
-            .fill(.bar)
+            .fill(Color.clear)
+            .background {
+                VisualEffectBackground(material:.hudWindow,blendingMode:.behindWindow)
+                    .clipShape(RoundedRectangle(cornerRadius:radius,style:.continuous))
+                    .opacity(0.86)
+            }
             .overlay(alignment:.top) {
                 RoundedRectangle(cornerRadius:radius,style:.continuous)
-                    .stroke(Color.white.opacity(0.42),lineWidth:0.8)
+                    .stroke(Color.white.opacity(0.36),lineWidth:0.8)
                     .blur(radius:0.2)
                     .mask(
                         LinearGradient(colors:[.black,.clear],
@@ -54,7 +80,7 @@ struct LiquidGlassPanel: View {
             }
             .overlay {
                 RoundedRectangle(cornerRadius:radius,style:.continuous)
-                    .stroke(C_GLASS_EDGE,lineWidth:0.7)
+                    .stroke(C_GLASS_EDGE,lineWidth:0.65)
             }
             .overlay(alignment:.top) {
                 Capsule()
