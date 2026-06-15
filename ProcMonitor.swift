@@ -13,10 +13,10 @@ let C_TAGBG  = Color(red:0.918,green:0.918,blue:0.937)
 let C_GREEN  = Color(red:0.204,green:0.780,blue:0.349)
 let C_AMBER  = Color(red:0.980,green:0.620,blue:0.020)
 let C_GLASS_EDGE = Color(red:0.820,green:0.960,blue:1.000).opacity(0.78)
-let C_GLASS_SHADE = Color(red:0.070,green:0.110,blue:0.170).opacity(0.22)
-let C_GLASS_GLOW = Color(red:0.250,green:0.720,blue:1.000).opacity(0.36)
-let C_GLASS_TINT = Color(red:0.520,green:0.760,blue:0.890).opacity(0.28)
-let C_GLASS_INK = Color(red:0.160,green:0.250,blue:0.360).opacity(0.16)
+let C_GLASS_SHADE = Color(red:0.070,green:0.110,blue:0.170).opacity(0.12)
+let C_GLASS_GLOW = Color(red:0.250,green:0.720,blue:1.000).opacity(0.24)
+let C_GLASS_TINT = Color(red:0.520,green:0.760,blue:0.890).opacity(0.10)
+let C_GLASS_INK = Color(red:0.160,green:0.250,blue:0.360).opacity(0.06)
 
 func fmtMem(_ b: Int64) -> String {
     let gb = Double(b) / (1024*1024*1024)
@@ -35,15 +35,15 @@ struct LiquidGlassPanel: View {
     let radius: CGFloat
     var body: some View {
         RoundedRectangle(cornerRadius:radius,style:.continuous)
-            .fill(.regularMaterial)
+            .fill(.ultraThinMaterial)
             .overlay(
                 RoundedRectangle(cornerRadius:radius,style:.continuous)
                     .fill(
                         LinearGradient(colors:[
-                            Color.white.opacity(0.34),
+                            Color.white.opacity(0.12),
                             C_GLASS_TINT,
                             C_GLASS_INK,
-                            Color.white.opacity(0.12)
+                            Color.white.opacity(0.04)
                         ],startPoint:.topLeading,endPoint:.bottomTrailing)
                     )
             )
@@ -52,19 +52,19 @@ struct LiquidGlassPanel: View {
                     .fill(
                         LinearGradient(colors:[
                             Color.clear,
-                            Color.white.opacity(0.24),
+                            Color.white.opacity(0.12),
                             Color.clear,
-                            C_GLASS_GLOW.opacity(0.70)
+                            C_GLASS_GLOW.opacity(0.42)
                         ],startPoint:.topLeading,endPoint:.bottomTrailing)
                     )
                     .blendMode(.screen)
-                    .blur(radius:8)
+                    .blur(radius:12)
                     .padding(16)
             }
             .overlay {
                 RoundedRectangle(cornerRadius:radius,style:.continuous)
-                    .stroke(Color.black.opacity(0.18),lineWidth:1)
-                    .blur(radius:2)
+                    .stroke(Color.black.opacity(0.10),lineWidth:1)
+                    .blur(radius:1.5)
                     .offset(y:1.2)
                     .mask(
                         LinearGradient(colors:[.clear,.black.opacity(0.75)],
@@ -77,22 +77,22 @@ struct LiquidGlassPanel: View {
                         LinearGradient(colors:[
                             Color.white.opacity(0.95),
                             C_GLASS_EDGE,
-                            Color.white.opacity(0.16),
-                            C_GLASS_GLOW.opacity(0.95)
+                            Color.white.opacity(0.10),
+                            C_GLASS_GLOW.opacity(0.70)
                         ],startPoint:.topLeading,endPoint:.bottomTrailing),
-                        lineWidth:1.6
+                        lineWidth:1.35
                     )
             }
             .overlay(alignment:.top) {
                 Capsule()
-                    .fill(Color.white.opacity(0.62))
-                    .frame(height:2)
+                    .fill(Color.white.opacity(0.46))
+                    .frame(height:1.4)
                     .padding(.horizontal,22)
                     .padding(.top,2)
                     .blur(radius:0.45)
             }
-            .shadow(color:Color.black.opacity(0.24),radius:24,x:0,y:18)
-            .shadow(color:C_GLASS_GLOW.opacity(0.65),radius:12,x:0,y:0)
+            .shadow(color:Color.black.opacity(0.18),radius:20,x:0,y:16)
+            .shadow(color:C_GLASS_GLOW.opacity(0.34),radius:10,x:0,y:0)
     }
 }
 
@@ -102,19 +102,19 @@ struct LiquidGlassBand: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius:radius,style:.continuous)
-            .fill(.thinMaterial)
+            .fill(.ultraThinMaterial)
             .overlay(
                 LinearGradient(colors:[
-                    Color.white.opacity(0.28),
-                    C_GLASS_TINT.opacity(0.85),
-                    C_GLASS_INK.opacity(0.70)
+                    Color.white.opacity(0.10),
+                    C_GLASS_TINT.opacity(0.58),
+                    Color.clear
                 ],startPoint:.topLeading,endPoint:.bottomTrailing)
             )
             .overlay(alignment:.top) {
-                Rectangle().fill(Color.white.opacity(0.46)).frame(height:1)
+                Rectangle().fill(Color.white.opacity(0.28)).frame(height:0.7)
             }
             .overlay(alignment:.bottom) {
-                Rectangle().fill(Color.black.opacity(0.10)).frame(height:1)
+                Rectangle().fill(Color.black.opacity(0.05)).frame(height:0.7)
             }
             .glassEffect(.regular, in: .rect(cornerRadius: radius))
     }
@@ -123,15 +123,15 @@ struct LiquidGlassBand: View {
 struct LiquidGlassRowHover: View {
     var body: some View {
         RoundedRectangle(cornerRadius:10,style:.continuous)
-            .fill(.thinMaterial)
+            .fill(.ultraThinMaterial)
             .overlay(
                 RoundedRectangle(cornerRadius:10,style:.continuous)
                     .fill(
                         LinearGradient(colors:[
-                            Color.white.opacity(0.30),
-                            C_GLASS_TINT.opacity(0.90),
-                            C_GLASS_GLOW.opacity(0.30),
-                            Color.white.opacity(0.08)
+                            Color.white.opacity(0.16),
+                            C_GLASS_TINT.opacity(0.54),
+                            C_GLASS_GLOW.opacity(0.18),
+                            Color.clear
                         ],startPoint:.topLeading,endPoint:.bottomTrailing)
                     )
             )
@@ -139,7 +139,7 @@ struct LiquidGlassRowHover: View {
                 RoundedRectangle(cornerRadius:10,style:.continuous)
                     .stroke(C_GLASS_EDGE,lineWidth:0.9)
             )
-            .shadow(color:C_GLASS_GLOW.opacity(0.26),radius:6,x:0,y:0)
+            .shadow(color:C_GLASS_GLOW.opacity(0.18),radius:5,x:0,y:0)
             .glassEffect(.regular, in: .rect(cornerRadius: 10))
             .padding(.horizontal,6)
             .padding(.vertical,2)
@@ -716,12 +716,12 @@ struct SortBtn: View {
                 .padding(.horizontal,10).padding(.vertical,3)
                 .background {
                     Capsule()
-                        .fill(active ? C_TEXT.opacity(0.74) : C_GLASS_TINT.opacity(hov ? 0.72 : 0.30))
+                        .fill(active ? C_TEXT.opacity(0.70) : C_GLASS_TINT.opacity(hov ? 0.42 : 0.16))
                         .overlay {
                             LinearGradient(colors:[
-                                Color.white.opacity(active ? 0.30 : 0.42),
-                                C_GLASS_GLOW.opacity(active ? 0.16 : 0.34),
-                                Color.black.opacity(active ? 0.16 : 0.05)
+                                Color.white.opacity(active ? 0.24 : 0.26),
+                                C_GLASS_GLOW.opacity(active ? 0.12 : 0.20),
+                                Color.black.opacity(active ? 0.15 : 0.02)
                             ],startPoint:.topLeading,endPoint:.bottomTrailing)
                             .clipShape(Capsule())
                         }
@@ -732,8 +732,8 @@ struct SortBtn: View {
                         .glassEffect(.regular, in: .capsule)
                 }
                 .foregroundColor(active ? .white : C_MUTED)
-                .shadow(color:active ? Color.black.opacity(0.24) : C_GLASS_GLOW.opacity(0.20),
-                        radius:active ? 7 : 5,x:0,y:3)
+                .shadow(color:active ? Color.black.opacity(0.22) : C_GLASS_GLOW.opacity(0.12),
+                        radius:active ? 7 : 4,x:0,y:3)
         }.buttonStyle(.plain).onHover{h in hov=h}
     }
 }
@@ -797,7 +797,7 @@ struct ContentView: View {
             .padding(.horizontal,12).padding(.vertical,8)
             .background {
                 LiquidGlassBand(radius:14)
-                    .opacity(0.74)
+                    .opacity(0.36)
             }
 
             // ── 列表表头 ──────────────────────────────────
@@ -813,7 +813,7 @@ struct ContentView: View {
             .frame(height:26)
             .background {
                 LiquidGlassBand()
-                    .opacity(0.62)
+                    .opacity(0.24)
             }
 
             Divider().opacity(0.15)
@@ -902,7 +902,7 @@ struct ContentView: View {
             .padding(.horizontal,12).padding(.vertical,7)
             .background {
                 LiquidGlassBand(radius:14)
-                    .opacity(0.72)
+                    .opacity(0.34)
             }
         }
         .frame(width:400,height:460)
