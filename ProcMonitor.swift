@@ -720,49 +720,42 @@ struct SortBtn: View {
     }
 }
 
-struct MemoryMeter: View {
-    let used: Double
-    let total: Double
-    let pct: Double
+struct ModeMetricStrip: View {
+    let showMem: Bool
+    let memUsed: Double
+    let memTotal: Double
+    let memPct: Double
+    let cpuPct: Double
 
-    var clampedPct: Double { min(max(pct,0),100) }
+    var valuePct: Double { showMem ? memPct : cpuPct }
+    var clampedPct: Double { min(max(valuePct,0),100) }
+    var valueText: String {
+        if showMem {
+            return String(format:"%.1f / %.0f GB",memUsed,memTotal)
+        }
+        return String(format:"%.1f%%",cpuPct)
+    }
+
     var body: some View {
         HStack(spacing:7) {
-            ZStack {
-                Circle()
-                    .stroke(Color.white.opacity(0.28),lineWidth:3)
-                Circle()
-                    .trim(from:0,to:clampedPct/100.0)
-                    .stroke(barColor(clampedPct),
-                            style:StrokeStyle(lineWidth:3,lineCap:.round))
-                    .rotationEffect(.degrees(-90))
-                Text("\(Int(clampedPct.rounded()))")
-                    .font(.system(size:7,weight:.bold).monospacedDigit())
-                    .foregroundColor(C_TEXT.opacity(0.76))
+            GeometryReader { g in
+                ZStack(alignment:.leading) {
+                    Capsule().fill(Color.white.opacity(0.26))
+                    Capsule().fill(barColor(clampedPct))
+                        .frame(width:g.size.width*CGFloat(clampedPct/100.0))
+                }
             }
-            .frame(width:24,height:24)
+            .frame(width:104,height:4)
 
-            VStack(alignment:.leading,spacing:3) {
-                HStack(alignment:.firstTextBaseline,spacing:3) {
-                    Text(String(format:"%.1f",used))
-                        .font(.system(size:11,weight:.semibold).monospacedDigit())
-                        .foregroundColor(C_TEXT.opacity(0.78))
-                    Text("/ \(String(format:"%.0f",total)) GB")
-                        .font(.system(size:10,weight:.medium).monospacedDigit())
-                        .foregroundColor(C_MUTED)
-                }
-                GeometryReader { g in
-                    ZStack(alignment:.leading) {
-                        Capsule().fill(Color.white.opacity(0.28))
-                        Capsule().fill(barColor(clampedPct))
-                            .frame(width:g.size.width*CGFloat(clampedPct/100.0))
-                    }
-                }
-                .frame(width:92,height:4)
-            }
+            Text(valueText)
+                .font(.system(size:10,weight:.semibold).monospacedDigit())
+                .foregroundColor(C_TEXT.opacity(0.72))
+                .frame(width:showMem ? 78 : 44,alignment:.leading)
         }
-        .frame(height:26)
-        .help("已用内存 \(String(format:"%.1f",used))/\(String(format:"%.0f",total)) GB · \(Int(clampedPct.rounded()))%")
+        .frame(height:12)
+        .help(showMem
+              ? "已用内存 \(String(format:"%.1f",memUsed))/\(String(format:"%.0f",memTotal)) GB · \(Int(clampedPct.rounded()))%"
+              : "当前 CPU 合计 \(String(format:"%.1f",cpuPct))%")
     }
 }
 
@@ -776,6 +769,7 @@ struct ContentView: View {
     @State private var cachedGroups : [PGroup] = []
 
     var totalMemBytes: Int64 { Int64(monitor.memTotal*1024*1024*1024) }
+    var visibleCpuPct: Double { cachedGroups.reduce(0){$0+$1.totalCpu} }
 
     func buildGroups() -> [PGroup] {
         let list = monitor.procs.filter { showSystem ? $0.isSystem : !$0.isSystem }
@@ -800,25 +794,38 @@ struct ContentView: View {
         VStack(spacing:0) {
 
             // ── 顶部工具栏 ────────────────────────────────
-            HStack(spacing:8) {
-                VStack(alignment:.leading,spacing:4) {
-                    Text("进程监控").font(.system(size:13,weight:.medium)).foregroundColor(C_TEXT)
-                    MemoryMeter(used:monitor.memUsed,total:monitor.memTotal,pct:monitor.memPct)
-                }
+            HStack(alignment:.center,spacing:8) {
+                Text("进程监控")
+                    .font(.system(size:13,weight:.medium))
+                    .foregroundColor(C_TEXT)
+                    .frame(width:72,alignment:.leading)
+
                 Spacer()
-                Divider().frame(height:14).padding(.horizontal,3)
-                SortBtn(label:"内存",active:showMem) {
-                    showMem=true; cachedGroups=buildGroups()
+
+                VStack(spacing:5) {
+                    HStack(spacing:8) {
+                        SortBtn(label:"内存",active:showMem) {
+                            showMem=true; cachedGroups=buildGroups()
+                        }
+                        SortBtn(label:"CPU",active:!showMem) {
+                            showMem=false; cachedGroups=buildGroups()
+                        }
+                    }
+                    ModeMetricStrip(showMem:showMem,
+                                    memUsed:monitor.memUsed,
+                                    memTotal:monitor.memTotal,
+                                    memPct:monitor.memPct,
+                                    cpuPct:visibleCpuPct)
                 }
-                SortBtn(label:"CPU",active:!showMem) {
-                    showMem=false; cachedGroups=buildGroups()
-                }
-                Divider().frame(height:14).padding(.horizontal,3)
+
+                Spacer()
+
                 Button(action:{NSApplication.shared.terminate(nil)}) {
                     Text("退出").font(.system(size:11)).foregroundColor(C_MUTED)
                 }.buttonStyle(.plain)
+                .frame(width:34,alignment:.trailing)
             }
-            .padding(.horizontal,12).padding(.vertical,8)
+            .padding(.horizontal,12).padding(.top,8).padding(.bottom,7)
 
             // ── 列表表头 ──────────────────────────────────
             HStack(spacing:0) {
