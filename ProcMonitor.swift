@@ -575,9 +575,9 @@ struct PRow: View {
             .padding(.trailing,8)
         }
         .frame(height: isChild ? 30 : 36)
-        .background(hov ? C_TAGBG.opacity(0.5) : Color.clear)
+        .background(hov ? Color.primary.opacity(0.07) : Color.clear)
         .contentShape(Rectangle())
-        .onHover{h in hov=h}   // 移除 withAnimation 避免 hover 触发重绘抖动
+        .onHover{h in hov=h}
     }
 }
 
@@ -656,11 +656,10 @@ struct ContentView: View {
                 }.buttonStyle(.plain)
             }
             .padding(.horizontal,12).padding(.vertical,8)
-            .background(C_WHITE)
+            .background(.clear)
 
             // ── 列表表头 ──────────────────────────────────
             HStack(spacing:0) {
-                // 与 PRow 图标左边距对齐：12 leading + 24 icon + 6 padding = 42
                 Text("进程 / App").font(.system(size:10)).foregroundColor(C_MUTED)
                     .padding(.leading,42)
                 Spacer()
@@ -670,9 +669,9 @@ struct ContentView: View {
                 Text("").frame(width:40).padding(.trailing,8)
             }
             .frame(height:26)
-            .background(C_BG)
+            .background(Color.primary.opacity(0.04))
 
-            Divider().opacity(0.3)
+            Divider().opacity(0.15)
 
             // ── 进程列表 ──────────────────────────────────
             ScrollView(.vertical, showsIndicators:false) {
@@ -703,7 +702,7 @@ struct ContentView: View {
                                 if expandedPids.contains(group.parent.pid) {
                                     ForEach(group.children,id:\.id) { child in
                                         VStack(spacing:0) {
-                                            Divider().opacity(0.12).padding(.leading,40)
+                                            Divider().opacity(0.1).padding(.leading,40)
                                             PRow(p:child,
                                                  displayRss:child.rss, displayCpu:child.cpu,
                                                  totalMemBytes:totalMemBytes, showMem:showMem,
@@ -715,7 +714,7 @@ struct ContentView: View {
                                 }
 
                                 if gi < displayed.count-1 {
-                                    Divider().opacity(0.18).padding(.leading,40)
+                                    Divider().opacity(0.12).padding(.leading,40)
                                 }
                             }
                         }
@@ -723,10 +722,10 @@ struct ContentView: View {
                 }
                 .padding(.bottom,6)
             }
-            .background(C_WHITE)
+            .background(.clear)
 
             // ── 底部导航 ──────────────────────────────────
-            Divider().opacity(0.3)
+            Divider().opacity(0.15)
             HStack {
                 let modeWord = showMem ? "内存" : "CPU"
                 if showSystem {
@@ -756,12 +755,12 @@ struct ContentView: View {
                 }
             }
             .padding(.horizontal,12).padding(.vertical,7)
-            .background(C_BG)
+            .background(Color.primary.opacity(0.04))
         }
-        .background(C_BG)
+        .background(.clear)
         .frame(width:400,height:460)
-        // 数据刷新时重建 groups（避免每次 hover 都重算）
-        .onChange(of:monitor.revision) { _ in cachedGroups=buildGroups() }
+        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+        .onChange(of:monitor.revision) { cachedGroups=buildGroups() }
         .onAppear { cachedGroups=buildGroups() }
     }
 }
@@ -778,7 +777,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentSize = NSSize(width:400,height:460)
         popover.behavior    = .transient
         popover.animates    = true
-        popover.contentViewController = NSHostingController(rootView:ContentView())
+        // 透明背景，让 SwiftUI .glassEffect() 直接透过 popover 显示
+        let hc = NSHostingController(rootView:ContentView())
+        hc.view.wantsLayer = true
+        hc.view.layer?.backgroundColor = .clear
+        popover.contentViewController = hc
         statusItem = NSStatusBar.system.statusItem(withLength:NSStatusItem.squareLength)
         if let btn = statusItem.button {
             let img = NSImage(systemSymbolName:"cpu",accessibilityDescription:"进程监控")
