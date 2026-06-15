@@ -12,6 +12,9 @@ let C_MUTED  = Color(red:0.600,green:0.600,blue:0.667)
 let C_TAGBG  = Color(red:0.918,green:0.918,blue:0.937)
 let C_GREEN  = Color(red:0.204,green:0.780,blue:0.349)
 let C_AMBER  = Color(red:0.980,green:0.620,blue:0.020)
+let C_GLASS_EDGE = Color.white.opacity(0.72)
+let C_GLASS_SHADE = Color(red:0.080,green:0.100,blue:0.160).opacity(0.12)
+let C_GLASS_GLOW = Color(red:0.760,green:0.900,blue:1.000).opacity(0.34)
 
 func fmtMem(_ b: Int64) -> String {
     let gb = Double(b) / (1024*1024*1024)
@@ -22,6 +25,108 @@ func barColor(_ pct: Double) -> Color {
     if pct < 60 { return C_GREEN }
     if pct < 90 { return C_AMBER }
     return C_ACCENT
+}
+
+// MARK: - Liquid Glass Surface
+
+struct LiquidGlassPanel: View {
+    let radius: CGFloat
+    var body: some View {
+        RoundedRectangle(cornerRadius:radius,style:.continuous)
+            .fill(.ultraThinMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius:radius,style:.continuous)
+                    .fill(
+                        LinearGradient(colors:[
+                            Color.white.opacity(0.40),
+                            Color.white.opacity(0.15),
+                            Color.white.opacity(0.07)
+                        ],startPoint:.topLeading,endPoint:.bottomTrailing)
+                    )
+            )
+            .overlay(alignment:.topLeading) {
+                RoundedRectangle(cornerRadius:radius,style:.continuous)
+                    .stroke(
+                        LinearGradient(colors:[
+                            Color.white.opacity(0.92),
+                            Color.white.opacity(0.20),
+                            C_GLASS_GLOW
+                        ],startPoint:.topLeading,endPoint:.bottomTrailing),
+                        lineWidth:1.2
+                    )
+                    .blur(radius:0.15)
+            }
+            .overlay(alignment:.top) {
+                Capsule()
+                    .fill(Color.white.opacity(0.38))
+                    .frame(height:1.2)
+                    .padding(.horizontal,18)
+                    .padding(.top,1.5)
+                    .blur(radius:0.25)
+            }
+            .overlay(alignment:.bottomTrailing) {
+                Circle()
+                    .fill(C_GLASS_GLOW)
+                    .frame(width:120,height:120)
+                    .blur(radius:30)
+                    .offset(x:36,y:42)
+                    .opacity(0.75)
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius:radius,style:.continuous)
+                    .stroke(C_GLASS_SHADE,lineWidth:0.8)
+                    .blur(radius:0.6)
+                    .offset(y:0.8)
+                    .mask(
+                        LinearGradient(colors:[.clear,.black],
+                                       startPoint:.top,endPoint:.bottom)
+                    )
+            )
+            .shadow(color:Color.black.opacity(0.18),radius:22,x:0,y:18)
+            .shadow(color:Color.white.opacity(0.42),radius:2,x:-1,y:-1)
+    }
+}
+
+struct LiquidGlassBand: View {
+    var body: some View {
+        Rectangle()
+            .fill(.thinMaterial)
+            .overlay(
+                LinearGradient(colors:[
+                    Color.white.opacity(0.30),
+                    Color.white.opacity(0.08)
+                ],startPoint:.top,endPoint:.bottom)
+            )
+            .overlay(alignment:.top) {
+                Rectangle().fill(Color.white.opacity(0.36)).frame(height:0.7)
+            }
+            .overlay(alignment:.bottom) {
+                Rectangle().fill(Color.black.opacity(0.06)).frame(height:0.7)
+            }
+    }
+}
+
+struct LiquidGlassRowHover: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius:10,style:.continuous)
+            .fill(.ultraThinMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius:10,style:.continuous)
+                    .fill(
+                        LinearGradient(colors:[
+                            Color.white.opacity(0.34),
+                            C_GLASS_GLOW.opacity(0.35),
+                            Color.white.opacity(0.10)
+                        ],startPoint:.topLeading,endPoint:.bottomTrailing)
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius:10,style:.continuous)
+                    .stroke(Color.white.opacity(0.42),lineWidth:0.7)
+            )
+            .padding(.horizontal,6)
+            .padding(.vertical,2)
+    }
 }
 
 // MARK: - 系统关键进程
@@ -575,7 +680,9 @@ struct PRow: View {
             .padding(.trailing,8)
         }
         .frame(height: isChild ? 30 : 36)
-        .background(hov ? Color.primary.opacity(0.07) : Color.clear)
+        .background {
+            if hov { LiquidGlassRowHover() }
+        }
         .contentShape(Rectangle())
         .onHover{h in hov=h}
     }
@@ -590,11 +697,22 @@ struct SortBtn: View {
         Button(action:action) {
             Text(label).font(.system(size:11,weight:.medium))
                 .padding(.horizontal,10).padding(.vertical,3)
-                .background(active ? C_TEXT : (hov ? C_TAGBG : Color.clear))
+                .background {
+                    Capsule()
+                        .fill(active ? C_TEXT.opacity(0.86) : Color.white.opacity(hov ? 0.22 : 0.08))
+                        .background {
+                            if !active && hov {
+                                Capsule().fill(.ultraThinMaterial)
+                            }
+                        }
+                        .overlay(alignment:.topLeading) {
+                            Capsule()
+                                .stroke(Color.white.opacity(active ? 0.34 : 0.46),lineWidth:0.7)
+                        }
+                }
                 .foregroundColor(active ? .white : C_MUTED)
-                .cornerRadius(20)
-                .overlay(RoundedRectangle(cornerRadius:20)
-                    .stroke(active ? Color.clear : C_TAGBG,lineWidth:1))
+                .shadow(color:active ? Color.black.opacity(0.16) : Color.clear,
+                        radius:4,x:0,y:2)
         }.buttonStyle(.plain).onHover{h in hov=h}
     }
 }
@@ -656,7 +774,10 @@ struct ContentView: View {
                 }.buttonStyle(.plain)
             }
             .padding(.horizontal,12).padding(.vertical,8)
-            .background(.clear)
+            .background {
+                LiquidGlassBand()
+                    .opacity(0.60)
+            }
 
             // ── 列表表头 ──────────────────────────────────
             HStack(spacing:0) {
@@ -669,7 +790,10 @@ struct ContentView: View {
                 Text("").frame(width:40).padding(.trailing,8)
             }
             .frame(height:26)
-            .background(Color.primary.opacity(0.04))
+            .background {
+                LiquidGlassBand()
+                    .opacity(0.48)
+            }
 
             Divider().opacity(0.15)
 
@@ -755,11 +879,21 @@ struct ContentView: View {
                 }
             }
             .padding(.horizontal,12).padding(.vertical,7)
-            .background(Color.primary.opacity(0.04))
+            .background {
+                LiquidGlassBand()
+                    .opacity(0.56)
+            }
         }
-        .background(.clear)
         .frame(width:400,height:460)
-        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+        .background {
+            LiquidGlassPanel(radius:14)
+        }
+        .clipShape(RoundedRectangle(cornerRadius:14,style:.continuous))
+        .overlay(alignment:.topLeading) {
+            RoundedRectangle(cornerRadius:14,style:.continuous)
+                .stroke(C_GLASS_EDGE,lineWidth:0.8)
+        }
+        .glassEffect(.regular, in: .rect(cornerRadius: 14))
         .onChange(of:monitor.revision) { cachedGroups=buildGroups() }
         .onAppear { cachedGroups=buildGroups() }
     }
