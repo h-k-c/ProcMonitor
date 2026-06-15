@@ -695,67 +695,87 @@ struct PRow: View {
     }
 }
 
-// MARK: - Sort Button
+// MARK: - Mode Metrics
 
-struct SortBtn: View {
-    let label:String; let active:Bool; let action:()->Void
-    @State private var hov=false
+struct MetricModeBlock: View {
+    let title: String
+    let value: String
+    let pct: Double
+    let active: Bool
+    let accent: Color
+    let action: () -> Void
+
+    @State private var hov = false
+    var clampedPct: Double { min(max(pct,0),100) }
+
     var body: some View {
         Button(action:action) {
-            Text(label).font(.system(size:11,weight:.medium))
-                .padding(.horizontal,10).padding(.vertical,3)
-                .background {
-                    Capsule()
-                        .fill(active ? C_TEXT.opacity(0.76) : Color.white.opacity(hov ? 0.14 : 0.06))
-                        .overlay {
-                            Capsule()
-                                .stroke(active ? Color.white.opacity(0.24) : C_GLASS_HAIRLINE,lineWidth:0.8)
-                        }
-                        .glassEffect(.regular, in: .capsule)
+            VStack(alignment:.leading,spacing:5) {
+                HStack(alignment:.firstTextBaseline,spacing:5) {
+                    Text(title)
+                        .font(.system(size:11,weight:active ? .semibold : .medium))
+                        .foregroundColor(active ? C_TEXT : C_MUTED)
+                    Text(value)
+                        .font(.system(size:10,weight:active ? .semibold : .medium).monospacedDigit())
+                        .foregroundColor((active ? C_TEXT : C_MUTED).opacity(active ? 0.74 : 0.64))
+                        .lineLimit(1)
                 }
-                .foregroundColor(active ? .white : C_MUTED)
-                .shadow(color:active ? Color.black.opacity(0.20) : Color.clear,
-                        radius:active ? 7 : 0,x:0,y:3)
-        }.buttonStyle(.plain).onHover{h in hov=h}
+
+                GeometryReader { g in
+                    ZStack(alignment:.leading) {
+                        Capsule().fill(Color.white.opacity(active ? 0.30 : 0.20))
+                        Capsule().fill(accent.opacity(active ? 0.95 : 0.48))
+                            .frame(width:g.size.width*CGFloat(clampedPct/100.0))
+                    }
+                }
+                .frame(height:4)
+            }
+            .padding(.horizontal,8)
+            .padding(.vertical,6)
+            .frame(width:92,height:42,alignment:.leading)
+            .background {
+                RoundedRectangle(cornerRadius:9,style:.continuous)
+                    .fill(active ? accent.opacity(0.08) : Color.white.opacity(hov ? 0.045 : 0.0))
+            }
+            .contentShape(RoundedRectangle(cornerRadius:9,style:.continuous))
+        }
+        .buttonStyle(.plain)
+        .onHover{h in hov=h}
+        .help("\(title) \(value) · \(Int(clampedPct.rounded()))%")
     }
 }
 
-struct ModeMetricStrip: View {
+struct ModeMetricsSwitch: View {
     let showMem: Bool
     let memUsed: Double
     let memTotal: Double
     let memPct: Double
     let cpuPct: Double
-
-    var valuePct: Double { showMem ? memPct : cpuPct }
-    var clampedPct: Double { min(max(valuePct,0),100) }
-    var valueText: String {
-        if showMem {
-            return String(format:"%.1f / %.0f GB",memUsed,memTotal)
-        }
-        return String(format:"%.1f%%",cpuPct)
-    }
+    let onMem: () -> Void
+    let onCPU: () -> Void
 
     var body: some View {
-        HStack(spacing:7) {
-            GeometryReader { g in
-                ZStack(alignment:.leading) {
-                    Capsule().fill(Color.white.opacity(0.26))
-                    Capsule().fill(barColor(clampedPct))
-                        .frame(width:g.size.width*CGFloat(clampedPct/100.0))
-                }
-            }
-            .frame(width:104,height:4)
+        HStack(spacing:0) {
+            MetricModeBlock(title:"内存",
+                            value:String(format:"%.1f/%.0fG",memUsed,memTotal),
+                            pct:memPct,
+                            active:showMem,
+                            accent:C_AMBER,
+                            action:onMem)
 
-            Text(valueText)
-                .font(.system(size:10,weight:.semibold).monospacedDigit())
-                .foregroundColor(C_TEXT.opacity(0.72))
-                .frame(width:showMem ? 78 : 44,alignment:.leading)
+            Rectangle()
+                .fill(C_GLASS_HAIRLINE)
+                .frame(width:1,height:30)
+                .padding(.horizontal,5)
+
+            MetricModeBlock(title:"CPU",
+                            value:String(format:"%.1f%%",cpuPct),
+                            pct:cpuPct,
+                            active:!showMem,
+                            accent:C_GREEN,
+                            action:onCPU)
         }
-        .frame(height:12)
-        .help(showMem
-              ? "已用内存 \(String(format:"%.1f",memUsed))/\(String(format:"%.0f",memTotal)) GB · \(Int(clampedPct.rounded()))%"
-              : "当前 CPU 合计 \(String(format:"%.1f",cpuPct))%")
+        .frame(height:44)
     }
 }
 
@@ -802,21 +822,17 @@ struct ContentView: View {
 
                 Spacer()
 
-                VStack(spacing:5) {
-                    HStack(spacing:8) {
-                        SortBtn(label:"内存",active:showMem) {
-                            showMem=true; cachedGroups=buildGroups()
-                        }
-                        SortBtn(label:"CPU",active:!showMem) {
-                            showMem=false; cachedGroups=buildGroups()
-                        }
-                    }
-                    ModeMetricStrip(showMem:showMem,
-                                    memUsed:monitor.memUsed,
-                                    memTotal:monitor.memTotal,
-                                    memPct:monitor.memPct,
-                                    cpuPct:visibleCpuPct)
-                }
+                ModeMetricsSwitch(showMem:showMem,
+                                  memUsed:monitor.memUsed,
+                                  memTotal:monitor.memTotal,
+                                  memPct:monitor.memPct,
+                                  cpuPct:visibleCpuPct,
+                                  onMem:{
+                                      showMem=true; cachedGroups=buildGroups()
+                                  },
+                                  onCPU:{
+                                      showMem=false; cachedGroups=buildGroups()
+                                  })
 
                 Spacer()
 
