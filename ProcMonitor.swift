@@ -720,6 +720,52 @@ struct SortBtn: View {
     }
 }
 
+struct MemoryMeter: View {
+    let used: Double
+    let total: Double
+    let pct: Double
+
+    var clampedPct: Double { min(max(pct,0),100) }
+    var body: some View {
+        HStack(spacing:7) {
+            ZStack {
+                Circle()
+                    .stroke(Color.white.opacity(0.28),lineWidth:3)
+                Circle()
+                    .trim(from:0,to:clampedPct/100.0)
+                    .stroke(barColor(clampedPct),
+                            style:StrokeStyle(lineWidth:3,lineCap:.round))
+                    .rotationEffect(.degrees(-90))
+                Text("\(Int(clampedPct.rounded()))")
+                    .font(.system(size:7,weight:.bold).monospacedDigit())
+                    .foregroundColor(C_TEXT.opacity(0.76))
+            }
+            .frame(width:24,height:24)
+
+            VStack(alignment:.leading,spacing:3) {
+                HStack(alignment:.firstTextBaseline,spacing:3) {
+                    Text(String(format:"%.1f",used))
+                        .font(.system(size:11,weight:.semibold).monospacedDigit())
+                        .foregroundColor(C_TEXT.opacity(0.78))
+                    Text("/ \(String(format:"%.0f",total)) GB")
+                        .font(.system(size:10,weight:.medium).monospacedDigit())
+                        .foregroundColor(C_MUTED)
+                }
+                GeometryReader { g in
+                    ZStack(alignment:.leading) {
+                        Capsule().fill(Color.white.opacity(0.28))
+                        Capsule().fill(barColor(clampedPct))
+                            .frame(width:g.size.width*CGFloat(clampedPct/100.0))
+                    }
+                }
+                .frame(width:92,height:4)
+            }
+        }
+        .frame(height:26)
+        .help("已用内存 \(String(format:"%.1f",used))/\(String(format:"%.0f",total)) GB · \(Int(clampedPct.rounded()))%")
+    }
+}
+
 // MARK: - Content View
 
 struct ContentView: View {
@@ -755,13 +801,9 @@ struct ContentView: View {
 
             // ── 顶部工具栏 ────────────────────────────────
             HStack(spacing:8) {
-                VStack(alignment:.leading,spacing:2) {
+                VStack(alignment:.leading,spacing:4) {
                     Text("进程监控").font(.system(size:13,weight:.medium)).foregroundColor(C_TEXT)
-                    let procCount = cachedGroups.count
-                    let memStr = String(format:"%.1f/%.0f GB · %.0f%%",
-                                        monitor.memUsed, monitor.memTotal, monitor.memPct)
-                    Text("\(procCount) 个进程  ·  已用内存 \(memStr)")
-                        .font(.system(size:10)).foregroundColor(C_MUTED)
+                    MemoryMeter(used:monitor.memUsed,total:monitor.memTotal,pct:monitor.memPct)
                 }
                 Spacer()
                 Divider().frame(height:14).padding(.horizontal,3)
