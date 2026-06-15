@@ -146,6 +146,35 @@ struct LiquidGlassRowHover: View {
     }
 }
 
+struct LiquidGlassArrow: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to:CGPoint(x:rect.midX,y:rect.minY))
+        path.addLine(to:CGPoint(x:rect.maxX,y:rect.maxY))
+        path.addLine(to:CGPoint(x:rect.minX,y:rect.maxY))
+        path.closeSubpath()
+        return path
+    }
+}
+
+struct PanelRootView: View {
+    var body: some View {
+        VStack(spacing:-1) {
+            LiquidGlassArrow()
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    LiquidGlassArrow()
+                        .stroke(C_GLASS_EDGE,lineWidth:1)
+                )
+                .frame(width:28,height:18)
+                .glassEffect(.regular, in: .rect(cornerRadius: 6))
+
+            ContentView()
+        }
+        .background(.clear)
+    }
+}
+
 // MARK: - 系统关键进程
 
 let kSysNames: Set<String> = [
@@ -924,19 +953,11 @@ struct ContentView: View {
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
-    var popover   : NSPopover!
+    var panel     : NSPanel?
+    var eventMonitor: Any?
 
     func applicationDidFinishLaunching(_ n: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        popover = NSPopover()
-        popover.contentSize = NSSize(width:400,height:460)
-        popover.behavior    = .transient
-        popover.animates    = true
-        // 透明背景，让 SwiftUI .glassEffect() 直接透过 popover 显示
-        let hc = NSHostingController(rootView:ContentView())
-        hc.view.wantsLayer = true
-        hc.view.layer?.backgroundColor = .clear
-        popover.contentViewController = hc
         statusItem = NSStatusBar.system.statusItem(withLength:NSStatusItem.squareLength)
         if let btn = statusItem.button {
             let img = NSImage(systemSymbolName:"cpu",accessibilityDescription:"进程监控")
@@ -946,10 +967,65 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func toggle(_ sender: NSStatusBarButton) {
-        if popover.isShown { popover.performClose(sender) }
-        else {
-            popover.show(relativeTo:sender.bounds,of:sender,preferredEdge:.minY)
-            popover.contentViewController?.view.window?.makeKey()
+        if panel?.isVisible == true {
+            hidePanel()
+        } else {
+            showPanel(relativeTo:sender)
+        }
+    }
+
+    func makePanel() -> NSPanel {
+        let size = NSSize(width:400,height:477)
+        let hc = NSHostingController(rootView:PanelRootView())
+        hc.view.wantsLayer = true
+        hc.view.layer?.backgroundColor = .clear
+
+        let panel = NSPanel(contentRect:NSRect(origin:.zero,size:size),
+                            styleMask:[.borderless,.nonactivatingPanel],
+                            backing:.buffered,
+                            defer:false)
+        panel.contentViewController = hc
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = false
+        panel.level = .statusBar
+        panel.collectionBehavior = [.canJoinAllSpaces,.transient,.fullScreenAuxiliary]
+        panel.hidesOnDeactivate = false
+        panel.isMovable = false
+        return panel
+    }
+
+    func showPanel(relativeTo sender: NSStatusBarButton) {
+        let p = panel ?? makePanel()
+        panel = p
+
+        if let win = sender.window {
+            let buttonFrame = win.convertToScreen(sender.frame)
+            let x = buttonFrame.midX - p.frame.width / 2
+            let y = buttonFrame.minY - p.frame.height + 2
+            p.setFrameOrigin(NSPoint(x:x,y:y))
+        }
+
+        p.orderFrontRegardless()
+        installDismissMonitor()
+    }
+
+    func hidePanel() {
+        panel?.orderOut(nil)
+        removeDismissMonitor()
+    }
+
+    func installDismissMonitor() {
+        removeDismissMonitor()
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching:[.leftMouseDown,.rightMouseDown]) {
+            [weak self] _ in self?.hidePanel()
+        }
+    }
+
+    func removeDismissMonitor() {
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
         }
     }
 }
