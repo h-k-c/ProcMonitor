@@ -12,9 +12,9 @@ let C_MUTED  = Color(red:0.600,green:0.600,blue:0.667)
 let C_TAGBG  = Color(red:0.918,green:0.918,blue:0.937)
 let C_GREEN  = Color(red:0.204,green:0.780,blue:0.349)
 let C_AMBER  = Color(red:0.980,green:0.620,blue:0.020)
-let C_GLASS_EDGE = Color.white.opacity(0.68)
-let C_GLASS_HAIRLINE = Color.white.opacity(0.22)
-let C_GLASS_SHADOW = Color.black.opacity(0.20)
+let C_GLASS_EDGE = Color.white.opacity(0.46)
+let C_GLASS_HAIRLINE = Color.white.opacity(0.18)
+let C_GLASS_SHADOW = Color.black.opacity(0.16)
 
 func fmtMem(_ b: Int64) -> String {
     let gb = Double(b) / (1024*1024*1024)
@@ -33,10 +33,10 @@ struct LiquidGlassPanel: View {
     let radius: CGFloat
     var body: some View {
         RoundedRectangle(cornerRadius:radius,style:.continuous)
-            .fill(.ultraThinMaterial)
+            .fill(.bar)
             .overlay(alignment:.top) {
                 RoundedRectangle(cornerRadius:radius,style:.continuous)
-                    .stroke(Color.white.opacity(0.58),lineWidth:1)
+                    .stroke(Color.white.opacity(0.42),lineWidth:0.8)
                     .blur(radius:0.2)
                     .mask(
                         LinearGradient(colors:[.black,.clear],
@@ -54,16 +54,16 @@ struct LiquidGlassPanel: View {
             }
             .overlay {
                 RoundedRectangle(cornerRadius:radius,style:.continuous)
-                    .stroke(C_GLASS_EDGE,lineWidth:0.9)
+                    .stroke(C_GLASS_EDGE,lineWidth:0.7)
             }
             .overlay(alignment:.top) {
                 Capsule()
-                    .fill(Color.white.opacity(0.34))
+                    .fill(Color.white.opacity(0.24))
                     .frame(height:1)
-                    .padding(.horizontal,26)
+                    .padding(.horizontal,30)
                     .padding(.top,2)
             }
-            .shadow(color:C_GLASS_SHADOW,radius:22,x:0,y:16)
+            .shadow(color:C_GLASS_SHADOW,radius:18,x:0,y:14)
     }
 }
 
@@ -101,29 +101,9 @@ struct LiquidGlassRowHover: View {
     }
 }
 
-struct LiquidGlassArrow: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to:CGPoint(x:rect.midX,y:rect.minY))
-        path.addLine(to:CGPoint(x:rect.maxX,y:rect.maxY))
-        path.addLine(to:CGPoint(x:rect.minX,y:rect.maxY))
-        path.closeSubpath()
-        return path
-    }
-}
-
 struct PanelRootView: View {
     var body: some View {
-        VStack(spacing:-1) {
-            LiquidGlassArrow()
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    LiquidGlassArrow()
-                        .stroke(Color.white.opacity(0.52),lineWidth:0.8)
-                )
-                .frame(width:26,height:16)
-                .glassEffect(.regular, in: .rect(cornerRadius: 6))
-
+        VStack(spacing:0) {
             ContentView()
         }
         .background(.clear)
@@ -918,7 +898,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func makePanel() -> NSPanel {
-        let size = NSSize(width:400,height:473)
+        let size = NSSize(width:400,height:458)
         let hc = NSHostingController(rootView:PanelRootView())
         hc.view.wantsLayer = true
         hc.view.layer?.backgroundColor = .clear
