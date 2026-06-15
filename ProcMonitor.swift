@@ -700,48 +700,35 @@ struct PRow: View {
 struct MetricModeBlock: View {
     let title: String
     let value: String
-    let pct: Double
     let active: Bool
     let accent: Color
     let action: () -> Void
 
     @State private var hov = false
-    var clampedPct: Double { min(max(pct,0),100) }
 
     var body: some View {
         Button(action:action) {
-            VStack(alignment:.leading,spacing:5) {
-                HStack(alignment:.firstTextBaseline,spacing:5) {
-                    Text(title)
-                        .font(.system(size:11,weight:active ? .semibold : .medium))
-                        .foregroundColor(active ? C_TEXT : C_MUTED)
-                    Text(value)
-                        .font(.system(size:10,weight:active ? .semibold : .medium).monospacedDigit())
-                        .foregroundColor((active ? C_TEXT : C_MUTED).opacity(active ? 0.74 : 0.64))
-                        .lineLimit(1)
-                }
-
-                GeometryReader { g in
-                    ZStack(alignment:.leading) {
-                        Capsule().fill(Color.white.opacity(active ? 0.30 : 0.20))
-                        Capsule().fill(accent.opacity(active ? 0.95 : 0.48))
-                            .frame(width:g.size.width*CGFloat(clampedPct/100.0))
-                    }
-                }
-                .frame(height:4)
+            HStack(alignment:.firstTextBaseline,spacing:6) {
+                Text(title)
+                    .font(.system(size:12,weight:active ? .semibold : .medium))
+                    .foregroundColor(active ? C_TEXT : C_MUTED)
+                Text(value)
+                    .font(.system(size:11,weight:active ? .semibold : .medium).monospacedDigit())
+                    .foregroundColor((active ? C_TEXT : C_MUTED).opacity(active ? 0.76 : 0.66))
+                    .lineLimit(1)
             }
-            .padding(.horizontal,8)
+            .padding(.horizontal,9)
             .padding(.vertical,6)
-            .frame(width:92,height:42,alignment:.leading)
+            .frame(width:92,height:30,alignment:.center)
             .background {
                 RoundedRectangle(cornerRadius:9,style:.continuous)
-                    .fill(active ? accent.opacity(0.08) : Color.white.opacity(hov ? 0.045 : 0.0))
+                    .fill(active ? accent.opacity(0.07) : Color.white.opacity(hov ? 0.045 : 0.0))
             }
             .contentShape(RoundedRectangle(cornerRadius:9,style:.continuous))
         }
         .buttonStyle(.plain)
         .onHover{h in hov=h}
-        .help("\(title) \(value) · \(Int(clampedPct.rounded()))%")
+        .help("\(title) \(value)")
     }
 }
 
@@ -758,7 +745,6 @@ struct ModeMetricsSwitch: View {
         HStack(spacing:0) {
             MetricModeBlock(title:"内存",
                             value:String(format:"%.1f/%.0fG",memUsed,memTotal),
-                            pct:memPct,
                             active:showMem,
                             accent:C_AMBER,
                             action:onMem)
@@ -770,12 +756,11 @@ struct ModeMetricsSwitch: View {
 
             MetricModeBlock(title:"CPU",
                             value:String(format:"%.1f%%",cpuPct),
-                            pct:cpuPct,
                             active:!showMem,
                             accent:C_GREEN,
                             action:onCPU)
         }
-        .frame(height:44)
+        .frame(height:32)
     }
 }
 
@@ -815,10 +800,11 @@ struct ContentView: View {
 
             // ── 顶部工具栏 ────────────────────────────────
             HStack(alignment:.center,spacing:8) {
-                Text("进程监控")
-                    .font(.system(size:13,weight:.medium))
-                    .foregroundColor(C_TEXT)
-                    .frame(width:72,alignment:.leading)
+                Image(systemName:"cpu")
+                    .font(.system(size:15,weight:.semibold))
+                    .foregroundColor(C_TEXT.opacity(0.82))
+                    .frame(width:34,height:30,alignment:.leading)
+                    .help("进程监控")
 
                 Spacer()
 
@@ -841,7 +827,7 @@ struct ContentView: View {
                 }.buttonStyle(.plain)
                 .frame(width:34,alignment:.trailing)
             }
-            .padding(.horizontal,12).padding(.top,8).padding(.bottom,7)
+            .padding(.horizontal,12).padding(.top,8).padding(.bottom,6)
 
             // ── 列表表头 ──────────────────────────────────
             HStack(spacing:0) {
