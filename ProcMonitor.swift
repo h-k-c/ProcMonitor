@@ -577,13 +577,13 @@ struct PRow: View {
             Group {
                 if let icon = p.appIcon {
                     Image(nsImage:icon).resizable().interpolation(.high)
-                        .frame(width:24,height:24).cornerRadius(6)
+                        .frame(width:26,height:26).cornerRadius(7)
                 } else {
                     ZStack {
-                        RoundedRectangle(cornerRadius:6).fill(C_TAGBG)
+                        RoundedRectangle(cornerRadius:7).fill(C_TAGBG)
                         Image(systemName:"gearshape.fill")
                             .font(.system(size:12)).foregroundColor(C_MUTED)
-                    }.frame(width:24,height:24)
+                    }.frame(width:26,height:26)
                 }
             }
             .padding(.leading, isChild ? 28 : 12)
@@ -593,7 +593,7 @@ struct PRow: View {
             VStack(alignment:.leading,spacing:1) {
                 HStack(spacing:5) {
                     Text(p.displayName)
-                        .font(.system(size:isChild ? 11 : 12,
+                        .font(.system(size:isChild ? 12 : 13,
                                       weight:isChild ? .regular : .medium))
                         .foregroundColor(isChild ? C_TEXT.opacity(0.7) : C_TEXT)
                         .lineLimit(1)
@@ -614,11 +614,11 @@ struct PRow: View {
                     }
                 }
                 Text(p.subName)
-                    .font(.system(size:9))
+                    .font(.system(size:10))
                     .foregroundColor(C_MUTED.opacity(0.55))
             }
-            .padding(.leading,6)
-            .frame(width:148,alignment:.leading)
+            .padding(.leading,7)
+            .frame(width:164,alignment:.leading)
             .contentShape(Rectangle())
             .help(procDescription(p.name))
             .onTapGesture { if hasChildren { onToggle() } }
@@ -634,12 +634,12 @@ struct PRow: View {
                             Capsule().fill(memBarColor)
                                 .frame(width:g.size.width*rssPct,height:3)
                         }
-                    }.frame(width:60,height:3)
+                    }.frame(width:58,height:3)
                     Text(fmtMem(displayRss))
-                        .font(.system(size:10,weight:.medium).monospacedDigit())
+                        .font(.system(size:11,weight:.medium).monospacedDigit())
                         .foregroundColor(isChild ? C_MUTED : C_TEXT)
                         .frame(width:50,alignment:.trailing)
-                }.frame(width:114)
+                }.frame(width:112)
             } else {
                 HStack(spacing:4) {
                     GeometryReader { g in
@@ -648,12 +648,12 @@ struct PRow: View {
                             Capsule().fill(cpuBarColor)
                                 .frame(width:g.size.width*cpuPct,height:3)
                         }
-                    }.frame(width:60,height:3)
+                    }.frame(width:58,height:3)
                     Text(String(format:"%.1f%%",displayCpu))
-                        .font(.system(size:10).monospacedDigit())
+                        .font(.system(size:11).monospacedDigit())
                         .foregroundColor(isChild ? C_MUTED : C_TEXT)
                         .frame(width:44,alignment:.trailing)
-                }.frame(width:108)
+                }.frame(width:106)
             }
 
             // ── 终止按钮（系统进程：橙色警告；用户进程：红色）────
@@ -683,10 +683,10 @@ struct PRow: View {
             .buttonStyle(.plain)
             .onHover{h in killHov=h}
             .help(p.isSystem ? "警告：终止系统进程可能导致系统不稳定" : "终止进程")
-            .frame(width:40)
-            .padding(.trailing,8)
+            .frame(width:34)
+            .padding(.trailing,6)
         }
-        .frame(height: isChild ? 30 : 36)
+        .frame(height: isChild ? 32 : 39)
         .background {
             if hov { LiquidGlassRowHover() }
         }
@@ -785,8 +785,8 @@ struct ContentView: View {
                 Spacer()
                 Text(showMem ? "内存" : "CPU")
                     .font(.system(size:10)).foregroundColor(C_MUTED)
-                    .frame(width:showMem ? 114 : 108, alignment:.trailing)
-                Text("").frame(width:40).padding(.trailing,8)
+                    .frame(width:showMem ? 112 : 106, alignment:.trailing)
+                Text("").frame(width:34).padding(.trailing,6)
             }
             .frame(height:26)
             .background {
@@ -883,7 +883,7 @@ struct ContentView: View {
                     .opacity(0.42)
             }
         }
-        .frame(width:400,height:458)
+        .frame(width:382,height:466)
         .background {
             LiquidGlassPanel(radius:14)
         }
@@ -924,7 +924,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func makePanel() -> NSPanel {
-        let size = NSSize(width:400,height:458)
+        let size = NSSize(width:382,height:466)
         let hc = NSHostingController(rootView:PanelRootView())
         hc.view.wantsLayer = true
         hc.view.layer?.backgroundColor = .clear
