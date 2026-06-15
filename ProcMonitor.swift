@@ -716,13 +716,14 @@ struct MetricModeBlock: View {
                     .font(.system(size:11,weight:active ? .semibold : .medium).monospacedDigit())
                     .foregroundColor((active ? C_TEXT : C_MUTED).opacity(active ? 0.76 : 0.66))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.86)
             }
             .padding(.horizontal,9)
             .padding(.vertical,6)
-            .frame(width:92,height:30,alignment:.center)
+            .frame(maxWidth:.infinity,minHeight:30,alignment:.center)
             .background {
                 RoundedRectangle(cornerRadius:9,style:.continuous)
-                    .fill(active ? accent.opacity(0.07) : Color.white.opacity(hov ? 0.045 : 0.0))
+                    .fill(active ? accent.opacity(0.16) : Color.white.opacity(hov ? 0.055 : 0.0))
             }
             .contentShape(RoundedRectangle(cornerRadius:9,style:.continuous))
         }
@@ -742,25 +743,69 @@ struct ModeMetricsSwitch: View {
     let onCPU: () -> Void
 
     var body: some View {
-        HStack(spacing:0) {
-            MetricModeBlock(title:"内存",
-                            value:String(format:"%.1f/%.0fG",memUsed,memTotal),
-                            active:showMem,
-                            accent:C_AMBER,
-                            action:onMem)
+        GeometryReader { g in
+            let dividerSpace: CGFloat = 13
+            let blockWidth = max((g.size.width - dividerSpace) / 2, 96)
 
-            Rectangle()
-                .fill(C_GLASS_HAIRLINE)
-                .frame(width:1,height:30)
-                .padding(.horizontal,5)
+            HStack(spacing:0) {
+                MetricModeBlock(title:"内存",
+                                value:String(format:"%.1f/%.0fG",memUsed,memTotal),
+                                active:showMem,
+                                accent:C_AMBER,
+                                action:onMem)
+                    .frame(width:blockWidth)
 
-            MetricModeBlock(title:"CPU",
-                            value:String(format:"%.1f%%",cpuPct),
-                            active:!showMem,
-                            accent:C_GREEN,
-                            action:onCPU)
+                Rectangle()
+                    .fill(C_GLASS_HAIRLINE)
+                    .frame(width:1,height:30)
+                    .padding(.horizontal,6)
+
+                MetricModeBlock(title:"CPU",
+                                value:String(format:"%.1f%%",cpuPct),
+                                active:!showMem,
+                                accent:C_GREEN,
+                                action:onCPU)
+                    .frame(width:blockWidth)
+            }
         }
         .frame(height:32)
+    }
+}
+
+struct MemoryWarningToast: View {
+    let used: Double
+    let total: Double
+    let pct: Double
+
+    var body: some View {
+        HStack(spacing:8) {
+            Image(systemName:"memorychip.fill")
+                .font(.system(size:14,weight:.semibold))
+                .foregroundColor(C_AMBER)
+            VStack(alignment:.leading,spacing:1) {
+                Text("内存占用偏高")
+                    .font(.system(size:12,weight:.semibold))
+                    .foregroundColor(C_TEXT)
+                Text(String(format:"%.1f / %.0f GB · %.0f%%",used,total,pct))
+                    .font(.system(size:10,weight:.medium).monospacedDigit())
+                    .foregroundColor(C_MUTED)
+            }
+        }
+        .padding(.horizontal,12)
+        .padding(.vertical,9)
+        .background {
+            RoundedRectangle(cornerRadius:12,style:.continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius:12,style:.continuous)
+                        .fill(C_AMBER.opacity(0.10))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius:12,style:.continuous)
+                        .stroke(Color.white.opacity(0.42),lineWidth:0.8)
+                )
+                .shadow(color:Color.black.opacity(0.18),radius:14,x:0,y:8)
+        }
     }
 }
 
@@ -772,9 +817,28 @@ struct ContentView: View {
     @State private var showSystem   = false
     @State private var expandedPids : Set<Int> = []
     @State private var cachedGroups : [PGroup] = []
+    @State private var showMemoryWarning = false
+    @State private var memoryWarningArmed = true
 
     var totalMemBytes: Int64 { Int64(monitor.memTotal*1024*1024*1024) }
     var visibleCpuPct: Double { cachedGroups.reduce(0){$0+$1.totalCpu} }
+
+    func handleMemoryWarning(_ pct: Double) {
+        if pct < 72 {
+            memoryWarningArmed = true
+            return
+        }
+        guard pct >= 75, memoryWarningArmed else { return }
+        memoryWarningArmed = false
+        withAnimation(.spring(response:0.28,dampingFraction:0.88)) {
+            showMemoryWarning = true
+        }
+        DispatchQueue.main.asyncAfter(deadline:.now()+6) {
+            withAnimation(.easeOut(duration:0.20)) {
+                showMemoryWarning = false
+            }
+        }
+    }
 
     func buildGroups() -> [PGroup] {
         let list = monitor.procs.filter { showSystem ? $0.isSystem : !$0.isSystem }
@@ -806,8 +870,6 @@ struct ContentView: View {
                     .frame(width:34,height:30,alignment:.leading)
                     .help("进程监控")
 
-                Spacer()
-
                 ModeMetricsSwitch(showMem:showMem,
                                   memUsed:monitor.memUsed,
                                   memTotal:monitor.memTotal,
@@ -819,8 +881,7 @@ struct ContentView: View {
                                   onCPU:{
                                       showMem=false; cachedGroups=buildGroups()
                                   })
-
-                Spacer()
+                    .frame(maxWidth:.infinity)
 
                 Button(action:{NSApplication.shared.terminate(nil)}) {
                     Text("退出").font(.system(size:11)).foregroundColor(C_MUTED)
@@ -831,21 +892,24 @@ struct ContentView: View {
 
             // ── 列表表头 ──────────────────────────────────
             HStack(spacing:0) {
-                Text("进程 / App").font(.system(size:10)).foregroundColor(C_MUTED)
+                Text("应用进程")
+                    .font(.system(size:10,weight:.semibold))
+                    .foregroundColor(C_TEXT.opacity(0.42))
                     .padding(.leading,42)
                 Spacer()
-                Text(showMem ? "内存" : "CPU")
-                    .font(.system(size:10)).foregroundColor(C_MUTED)
+                Text(showMem ? "内存占用" : "CPU 占用")
+                    .font(.system(size:10,weight:.semibold))
+                    .foregroundColor(C_TEXT.opacity(0.42))
                     .frame(width:showMem ? 112 : 106, alignment:.trailing)
                 Text("").frame(width:34).padding(.trailing,6)
             }
-            .frame(height:26)
+            .frame(height:24)
             .background {
                 LiquidGlassBand()
-                    .opacity(0.55)
+                    .opacity(0.32)
             }
 
-            Divider().opacity(0.08)
+            Divider().opacity(0.05)
 
             // ── 进程列表 ──────────────────────────────────
             ScrollView(.vertical, showsIndicators:false) {
@@ -904,34 +968,46 @@ struct ContentView: View {
                 let modeWord = showMem ? "内存" : "CPU"
                 if showSystem {
                     HStack(spacing:4) {
-                        Image(systemName:"lock.fill").font(.system(size:10)).foregroundColor(C_MUTED)
-                        Text("系统\(modeWord)").font(.system(size:11)).foregroundColor(C_MUTED)
+                        Image(systemName:"lock.fill")
+                            .font(.system(size:10,weight:.medium))
+                        Text("系统 · \(modeWord)")
+                            .font(.system(size:11,weight:.medium))
                     }
+                    .foregroundColor(C_TEXT.opacity(0.48))
                     Spacer()
                     Button(action:{ showSystem=false; cachedGroups=buildGroups() }) {
-                        HStack(spacing:3) {
-                            Image(systemName:"chevron.left").font(.system(size:10,weight:.medium))
-                            Text("用户\(modeWord)").font(.system(size:11,weight:.medium))
-                        }.foregroundColor(C_ACCENT)
+                        HStack(spacing:4) {
+                            Image(systemName:"chevron.left")
+                                .font(.system(size:10,weight:.semibold))
+                            Text("用户 · \(modeWord)")
+                                .font(.system(size:11,weight:.semibold))
+                        }
+                        .foregroundColor(C_TEXT.opacity(0.62))
                     }.buttonStyle(.plain)
                 } else {
                     HStack(spacing:4) {
-                        Image(systemName:"person.fill").font(.system(size:10)).foregroundColor(C_MUTED)
-                        Text("用户\(modeWord)").font(.system(size:11)).foregroundColor(C_MUTED)
+                        Image(systemName:"person.fill")
+                            .font(.system(size:10,weight:.medium))
+                        Text("用户 · \(modeWord)")
+                            .font(.system(size:11,weight:.medium))
                     }
+                    .foregroundColor(C_TEXT.opacity(0.48))
                     Spacer()
                     Button(action:{ showSystem=true; cachedGroups=buildGroups() }) {
-                        HStack(spacing:3) {
-                            Text("系统\(modeWord)").font(.system(size:11,weight:.medium))
-                            Image(systemName:"chevron.right").font(.system(size:10,weight:.medium))
-                        }.foregroundColor(C_MUTED)
+                        HStack(spacing:4) {
+                            Text("系统 · \(modeWord)")
+                                .font(.system(size:11,weight:.semibold))
+                            Image(systemName:"chevron.right")
+                                .font(.system(size:10,weight:.semibold))
+                        }
+                        .foregroundColor(C_TEXT.opacity(0.62))
                     }.buttonStyle(.plain)
                 }
             }
             .padding(.horizontal,12).padding(.vertical,7)
             .background {
                 LiquidGlassBand(radius:14)
-                    .opacity(0.42)
+                    .opacity(0.28)
             }
         }
         .frame(width:382,height:466)
@@ -943,8 +1019,16 @@ struct ContentView: View {
             RoundedRectangle(cornerRadius:14,style:.continuous)
                 .stroke(C_GLASS_EDGE,lineWidth:0.8)
         }
+        .overlay(alignment:.top) {
+            if showMemoryWarning {
+                MemoryWarningToast(used:monitor.memUsed,total:monitor.memTotal,pct:monitor.memPct)
+                    .padding(.top,50)
+                    .transition(.move(edge:.top).combined(with:.opacity))
+            }
+        }
         .glassEffect(.regular, in: .rect(cornerRadius: 14))
-        .onChange(of:monitor.revision) { cachedGroups=buildGroups() }
+        .onChange(of:monitor.revision) { _, _ in cachedGroups=buildGroups() }
+        .onChange(of:monitor.memPct) { _, newPct in handleMemoryWarning(newPct) }
         .onAppear { cachedGroups=buildGroups() }
     }
 }
